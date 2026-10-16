@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Миг — шары в наличии</title>
+<title>Миг — фигуры в наличии</title>
 <meta name="description" content="Фольгированные фигуры, звёзды, сердца, цифры и латекс в наличии. Выберите шар — соберём композицию под ваш праздник.">
 <meta name="theme-color" content="#AF5A38">
 <link rel="icon" href="assets/logo-terra.png">
@@ -141,7 +141,7 @@
 <header class="hero wrap">
   <div class="panel">
     <img class="logo" src="assets/logo-milk.png" alt="Миг">
-    <h1>Шары в&nbsp;наличии</h1>
+    <h1>Фигуры в&nbsp;наличии</h1>
     <hr class="rule">
     <p class="lead">Выберите шар, который нравится, — соберём с ним композицию под ваш праздник и бюджет</p>
   </div>
@@ -151,7 +151,7 @@
   <div class="wrap">
     <label class="search" id="searchBox">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Найти: зайчик, звезда, цифра 5" autocomplete="off" aria-label="Поиск по названию">
+      <input id="q" type="search" placeholder="Найти: зайчик, мишка, единорог" autocomplete="off" aria-label="Поиск по названию">
       <button class="clear" id="clear" type="button" aria-label="Очистить поиск">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
@@ -193,6 +193,9 @@
 <script src="config.js"></script>
 <script>
 const CFG = Object.assign({ API_URL: '', BOT_USERNAME: 'mig_sgt_bot', CONTACT_URL: 'https://t.me/mig_sgt_bot', INSTAGRAM_URL: '' }, window.MIG_CONFIG || {});
+// Какие категории показывать клиентам. Чтобы добавить, например, цифры: ['Фигуры', 'Цифры'].
+// Можно задать в config.js строкой SHOW_CATEGORIES: ['Фигуры', 'Цифры'], — тогда этот файл не трогать.
+const SHOW_CATEGORIES = CFG.SHOW_CATEGORIES || ['Фигуры'];
 const $ = (id) => document.getElementById(id);
 const state = { items: [], categories: [], cat: 'all', q: '', shown: [], open: -1 };
 
@@ -244,14 +247,15 @@ function render() {
     const write = el('a', { class: 'want', href: CFG.CONTACT_URL, target: '_blank', rel: 'noopener', text: 'Написать мне' });
     grid.appendChild(state.items.length
       ? emptyBlock('Ничего не нашлось', q ? 'По запросу «' + state.q + '» сейчас ничего нет в наличии. Напишите мне — подберу похожее.' : 'В этой категории сейчас пусто.', write)
-      : emptyBlock('Скоро здесь появятся шары', 'Пока список пуст. Напишите мне, и я расскажу, что есть.', write));
+      : emptyBlock('Скоро здесь появятся фигуры', 'Пока список пуст. Напишите мне, и я расскажу, что есть.', write));
     return;
   }
   const frag = document.createDocumentFragment();
   state.shown.forEach((it, i) => {
     const ph = el('button', { class: 'photo', type: 'button', 'aria-label': 'Открыть фото: ' + it.name }, [photo(it, 400)]);
     ph.addEventListener('click', () => openViewer(i));
-    frag.appendChild(el('article', { class: 'card tone-' + (tones[it.category] ?? 2) }, [
+    const tone = state.categories.length < 2 ? i % 3 : (tones[it.category] ?? 2);
+    frag.appendChild(el('article', { class: 'card tone-' + tone }, [
       ph,
       el('h3', { class: 'name', text: it.name }),
       it.size ? el('p', { class: 'size', text: it.size }) : null,
@@ -306,8 +310,10 @@ const sentinel = el('div', { style: 'height:1px;margin-top:-1px' }); $('bar').be
 new IntersectionObserver(([e]) => $('bar').classList.toggle('stuck', !e.isIntersecting)).observe(sentinel);
 
 function apply(data) {
-  state.items = Array.isArray(data.items) ? data.items : [];
-  state.categories = Array.isArray(data.categories) ? data.categories : [];
+  const show = (c) => !SHOW_CATEGORIES.length || SHOW_CATEGORIES.includes(c);
+  state.items = (Array.isArray(data.items) ? data.items : []).filter((it) => show(it.category));
+  state.categories = (Array.isArray(data.categories) ? data.categories : []).filter(show);
+  $('chips').hidden = state.categories.length < 2;
   if (state.cat !== 'all' && !state.categories.includes(state.cat)) state.cat = 'all';
   renderChips(); render();
 }
